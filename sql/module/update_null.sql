@@ -1,19 +1,3 @@
-SELECT * FROM ncr_ride_bookings;
-
-SELECT count(*) FROM ncr_ride_bookings
-WHERE "Avg VTAT" = NULL;
-
-SELECT count(*) FROM ncr_ride_bookings
-WHERE "Avg VTAT" = 'null';
-
-UPDATE ncr_ride_bookings 
-SET "Cancelled Rides by Customer" = 0 
-WHERE "Cancelled Rides by Customer" = 'null';
-
-UPDATE ncr_ride_bookings
-SET "Reason for cancelling by Customer" = 'invalid'
-WHERE "Reason for cancelling by Customer" ILIKE 'null';
-
 UPDATE ncr_ride_bookings SET "Avg VTAT" = 0 WHERE "Avg VTAT" = 'null';
 UPDATE ncr_ride_bookings SET "Avg CTAT" = 0 WHERE "Avg CTAT" = 'null';
 UPDATE ncr_ride_bookings SET "Cancelled Rides by Customer" = 0 WHERE "Cancelled Rides by Customer" = 'null';
@@ -27,8 +11,3 @@ UPDATE ncr_ride_bookings SET "Ride Distance" = 0 WHERE "Ride Distance" = 'null';
 UPDATE ncr_ride_bookings SET "Driver Ratings" = 0 WHERE "Driver Ratings" = 'null';
 UPDATE ncr_ride_bookings SET "Customer Rating" = 0 WHERE "Customer Rating" = 'null';
 UPDATE ncr_ride_bookings SET "Payment Method" = 'invalid' WHERE "Payment Method" = 'null';
-
-SELECT * FROM ncr_ride_bookings;
-
-SELECT * FROM ncr_ride_bookings
-WHERE "Avg VTAT" = 'null';
