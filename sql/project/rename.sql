@@ -8,7 +8,7 @@ ALTER TABLE ncr_ride_bookings RENAME COLUMN "Drop Location"                     
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Avg VTAT"                             TO avg_vtat;
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Avg CTAT"                             TO avg_ctat;
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Cancelled Rides by Customer"          TO cancelled_rides_by_customer;
-ALTER TABLE ncr_ride_bookings RENAME COLUMN "Reason for cancelling by Customer" TO customer_cancellation_reason;
+ALTER TABLE ncr_ride_bookings RENAME COLUMN "Reason for cancelling by Customer"    TO customer_cancellation_reason;
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Cancelled Rides by Driver"            TO cancelled_rides_by_driver;
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Driver Cancellation Reason"           TO driver_cancellation_reason;
 ALTER TABLE ncr_ride_bookings RENAME COLUMN "Incomplete Rides"                     TO incompleted_rides;
