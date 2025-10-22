@@ -1,0 +1,29 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: pgbouncer-rw
+  namespace: workshop-ghaza
+spec:
+  cluster:
+    name: pg-ws
+  instances: 1
+  type: rw
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      default_pool_size: "50"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: pgbouncer-ro
+  namespace: workshop-ghaza
+spec:
+  cluster:
+    name: pg-ws
+  instances: 1
+  type: ro
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      default_pool_size: "50"

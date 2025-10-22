@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pg-ws-pdb
+  namespace: workshop-ghaza
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      cnpg.io/cluster: pg-ws

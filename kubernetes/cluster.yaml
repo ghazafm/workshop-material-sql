@@ -1,0 +1,39 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-ws
+  namespace: workshop-ghaza
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  superuserSecret:
+    name: pg-superuser
+
+  bootstrap:
+    initdb:
+      database: spectra
+      owner: peserta
+      secret:
+        name: pg-peserta
+  storage:
+    size: 5Gi
+    storageClass: local-path
+
+  walStorage:
+    size: 3Gi
+    storageClass: local-path
+
+  affinity:
+    enablePodAntiAffinity: true
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+
+  monitoring:
+    enablePodMonitor: true
