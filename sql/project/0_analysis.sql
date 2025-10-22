@@ -21,8 +21,6 @@ WHERE "Booking Status" LIKE 'in%'
 SELECT "Booking Status" FROM ncr_ride_bookings
 WHERE "Booking Status" ILIKE 'in%'
 
-
-
 SELECT * FROM ncr_ride_bookings;
 
 SELECT count(*) FROM ncr_ride_bookings
