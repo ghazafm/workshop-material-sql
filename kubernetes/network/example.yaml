@@ -1,0 +1,27 @@
+# pg-ngrok-endpoints.yaml
+apiVersion: ngrok.k8s.ngrok.com/v1alpha1
+kind: AgentEndpoint
+metadata:
+  name: pg-rw-endpoint
+  namespace: ngrok-operator
+spec:
+  # This tells ngrok to create a *new* public TCP endpoint automatically
+  url: "tcp://new"
+  description: "Postgres RW via PgBouncer"
+  bindings:
+    - public
+  upstream:
+    url: "tcp://pgbouncer-rw.workshop-ghaza.svc.cluster.local:5432"
+---
+apiVersion: ngrok.k8s.ngrok.com/v1alpha1
+kind: AgentEndpoint
+metadata:
+  name: pg-ro-endpoint
+  namespace: ngrok-operator
+spec:
+  url: "tcp://new"
+  description: "Postgres RO via PgBouncer"
+  bindings:
+    - public
+  upstream:
+    url: "tcp://pgbouncer-ro.workshop-ghaza.svc.cluster.local:5432"

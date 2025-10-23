@@ -1,0 +1,28 @@
+# pgbouncer-lb.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-rw-lb
+  namespace: workshop-ghaza
+spec:
+  type: LoadBalancer
+  selector:
+    cnpg.io/poolerName: pgbouncer-rw
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-ro-lb
+  namespace: workshop-ghaza
+spec:
+  type: LoadBalancer
+  selector:
+    cnpg.io/poolerName: pgbouncer-ro
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

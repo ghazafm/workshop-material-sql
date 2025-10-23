@@ -4,7 +4,7 @@ metadata:
   name: pg-ws
   namespace: workshop-ghaza
 spec:
-  instances: 1
+  instances: 3
   imageName: ghcr.io/cloudnative-pg/postgresql:16
 
   superuserSecret:
