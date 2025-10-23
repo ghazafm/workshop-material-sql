@@ -3,6 +3,9 @@ kind: Cluster
 metadata:
   name: pg-ws
   namespace: workshop-ghaza
+  annotations:
+    # Prevent automatic deletion of PVCs when cluster is deleted
+    cnpg.io/skipEmptyWalArchiveCheck: "true"
 spec:
   instances: 3
   imageName: ghcr.io/cloudnative-pg/postgresql:16
@@ -16,13 +19,28 @@ spec:
       owner: peserta
       secret:
         name: pg-peserta
+  
   storage:
     size: 5Gi
     storageClass: local-path
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: local-path
 
   walStorage:
     size: 3Gi
     storageClass: local-path
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 3Gi
+      storageClassName: local-path
 
   affinity:
     enablePodAntiAffinity: true

@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Script to delete all Kubernetes resources for the PostgreSQL workshop
-# Usage: ./delete-all.sh [--force] [--keep-data]
-#   --force      : Skip confirmation prompts
-#   --keep-data  : Preserve PVCs and data
+# Usage: ./delete-all.sh [--force] [--delete-data]
+#   --force        : Skip confirmation prompts
+#   --delete-data  : Delete PVCs and all data (by default, data is preserved)
 
 set -e  # Exit on error
 
 NAMESPACE="workshop-ghaza"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KEEP_DATA=false
+KEEP_DATA=true
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -45,8 +45,8 @@ for arg in "$@"; do
         --force)
             FORCE=true
             ;;
-        --keep-data)
-            KEEP_DATA=true
+        --delete-data)
+            KEEP_DATA=false
             ;;
     esac
 done
@@ -54,6 +54,12 @@ done
 # Check if kubectl is installed
 if ! command -v kubectl &> /dev/null; then
     print_error "kubectl is not installed. Please install kubectl first."
+    exit 1
+fi
+
+# Check if helm is installed
+if ! command -v helm &> /dev/null; then
+    print_error "helm is not installed. Please install helm first."
     exit 1
 fi
 
@@ -67,15 +73,16 @@ fi
 if [ "$FORCE" != "true" ]; then
     print_warning "This will delete ALL resources in namespace: $NAMESPACE"
     print_warning "This includes:"
-    echo "  - PostgreSQL cluster and all data"
+    echo "  - PostgreSQL cluster"
     echo "  - PgBouncer poolers"
-    if [ "$KEEP_DATA" != "true" ]; then
-        echo "  - All persistent volumes and data (use --keep-data to preserve)"
+    if [ "$KEEP_DATA" = "true" ]; then
+        echo "  - PVCs and data will be PRESERVED by default (use --delete-data to remove)"
     else
-        print_info "  - PVCs and data will be PRESERVED (--keep-data flag active)"
+        echo "  - All persistent volumes and data will be DELETED (--delete-data flag active)"
     fi
     echo "  - LoadBalancer services"
     echo "  - Cloudflare tunnel (if configured)"
+    echo "  - CloudNativePG operator"
     echo ""
     read -p "Are you sure you want to continue? (yes/no): " -r
     echo ""
@@ -137,6 +144,16 @@ echo ""
 
 # Delete PostgreSQL cluster
 print_info "Deleting PostgreSQL cluster (this may take a minute)"
+
+# If keeping data, remove ownerReferences from PVCs first to prevent auto-deletion
+if [ "$KEEP_DATA" = "true" ]; then
+    print_info "Removing ownerReferences from PVCs to prevent auto-deletion..."
+    for pvc in $(kubectl get pvc -n $NAMESPACE -l cnpg.io/cluster=pg-ws -o name 2>/dev/null); do
+        kubectl patch $pvc -n $NAMESPACE --type=json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]' 2>/dev/null || true
+    done
+    print_success "PVCs protected from auto-deletion"
+fi
+
 kubectl delete -f "$SCRIPT_DIR/database/cluster.yaml" --ignore-not-found=true
 print_success "PostgreSQL cluster deleted"
 echo ""
@@ -154,12 +171,12 @@ echo ""
 
 # Delete PVCs unless --keep-data flag is used
 if [ "$KEEP_DATA" != "true" ]; then
-    print_info "Deleting PVCs (this will DELETE all data)"
+    print_warning "Deleting PVCs (--delete-data flag active - this will DELETE all data)"
     kubectl delete pvc -n $NAMESPACE -l cnpg.io/cluster=pg-ws --ignore-not-found=true
     print_success "PVCs deleted"
     echo ""
 else
-    print_info "Preserving PVCs and data (--keep-data flag active)"
+    print_info "Preserving PVCs and data (default behavior)"
     PVC_COUNT=$(kubectl get pvc -n $NAMESPACE -l cnpg.io/cluster=pg-ws --no-headers 2>/dev/null | wc -l | tr -d ' ')
     if [ "$PVC_COUNT" -gt 0 ]; then
         print_success "Found $PVC_COUNT PVC(s) that will be preserved:"
@@ -170,30 +187,59 @@ else
     echo ""
 fi
 
-# Optional: Delete the namespace entirely
-read -p "Do you want to delete the entire namespace '$NAMESPACE'? (yes/no): " -r
-echo ""
-if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
-    print_info "Deleting namespace: $NAMESPACE"
-    kubectl delete namespace $NAMESPACE
-    print_success "Namespace deleted"
+# Uninstall CloudNativePG operator
+if helm list -n $NAMESPACE | grep -q cnpg; then
+    print_info "Uninstalling CloudNativePG operator"
+    helm uninstall cnpg -n $NAMESPACE
+    print_success "CNPG operator uninstalled"
     echo ""
 else
-    print_info "Namespace preserved. You can delete it manually with:"
+    print_info "CNPG operator not found (already uninstalled or not installed via helm)"
+    echo ""
+fi
+
+# Delete namespace only if --delete-data flag is used
+if [ "$KEEP_DATA" != "true" ]; then
+    # Optional: Delete the namespace entirely
+    if [ "$FORCE" != "true" ]; then
+        read -p "Do you want to delete the entire namespace '$NAMESPACE'? (yes/no): " -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+            print_info "Deleting namespace: $NAMESPACE"
+            kubectl delete namespace $NAMESPACE
+            print_success "Namespace deleted"
+            echo ""
+        else
+            print_info "Namespace preserved. You can delete it manually with:"
+            echo "  kubectl delete namespace $NAMESPACE"
+            echo ""
+        fi
+    else
+        print_info "Deleting namespace: $NAMESPACE"
+        kubectl delete namespace $NAMESPACE
+        print_success "Namespace deleted"
+        echo ""
+    fi
+else
+    print_warning "Namespace will NOT be deleted (data preservation mode)"
+    print_info "The namespace '$NAMESPACE' contains your preserved PVCs with data."
+    print_info "To delete the namespace later (this will delete your data):"
     echo "  kubectl delete namespace $NAMESPACE"
     echo ""
 fi
 
 # Check remaining resources
-print_info "Checking for any remaining resources in namespace..."
-REMAINING=$(kubectl get all -n $NAMESPACE 2>/dev/null | grep -v "^NAME" | wc -l || echo "0")
-if [ "$REMAINING" -gt 0 ]; then
-    print_warning "Some resources still exist in namespace:"
-    kubectl get all -n $NAMESPACE
-    echo ""
-else
-    print_success "No resources remaining in namespace"
-    echo ""
+if kubectl get namespace $NAMESPACE &> /dev/null; then
+    print_info "Checking for any remaining resources in namespace..."
+    REMAINING=$(kubectl get all -n $NAMESPACE 2>/dev/null | grep -v "^NAME" | wc -l || echo "0")
+    if [ "$REMAINING" -gt 0 ]; then
+        print_warning "Some resources still exist in namespace:"
+        kubectl get all -n $NAMESPACE
+        echo ""
+    else
+        print_success "No resources remaining in namespace (except PVCs if preserved)"
+        echo ""
+    fi
 fi
 
 echo "========================================"

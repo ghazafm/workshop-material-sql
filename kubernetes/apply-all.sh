@@ -38,10 +38,42 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
+# Check if helm is installed
+if ! command -v helm &> /dev/null; then
+    print_error "helm is not installed. Please install helm first."
+    exit 1
+fi
+
 # Create namespace
 print_info "Creating namespace: $NAMESPACE"
 kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
 print_success "Namespace created/verified"
+echo ""
+
+# Install CloudNativePG operator
+print_info "Installing CloudNativePG operator (CNPG)"
+if ! helm list -n $NAMESPACE | grep -q cnpg; then
+    print_info "Adding CNPG helm repository..."
+    helm repo add cnpg https://cloudnative-pg.github.io/charts
+    helm repo update
+    print_info "Installing CNPG operator..."
+    helm upgrade --install cnpg \
+      --namespace $NAMESPACE \
+      cnpg/cloudnative-pg
+    print_success "CNPG operator installed"
+else
+    print_info "CNPG operator already installed, upgrading..."
+    helm repo update
+    helm upgrade --install cnpg \
+      --namespace $NAMESPACE \
+      cnpg/cloudnative-pg
+    print_success "CNPG operator upgraded"
+fi
+
+# Wait for CNPG operator to be ready
+print_info "Waiting for CNPG operator to be ready..."
+kubectl wait --for=condition=Available deployment/cnpg-cloudnative-pg -n $NAMESPACE --timeout=120s
+print_success "CNPG operator is ready"
 echo ""
 
 # Apply storage class
